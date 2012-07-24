@@ -79,7 +79,7 @@ get_outputs(void) {
             if (!strcmp(XGetAtomName(display, p[j]), "EDID")) {
                 printf("%s:", output_info->name);
                 int k;
-                for (k = 0; k < nitems; ++k) {
+                for (k = EDID_HEADER_END; k < nitems; ++k) {
                     printf("%02x", (unsigned char) prop[k]);
                 }
                 parse_edid(prop, nitems);
