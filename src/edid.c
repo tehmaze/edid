@@ -149,7 +149,7 @@ main(int argc, char **argv) {
     if (argc > 1) {
         if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
             fprintf(stderr, "edid version 0.1\n");
-            fprintf(stderr, "usage: %s [-h|--help|-v|--verbose]\n", argv[0]);
+            fprintf(stderr, "usage:     %s [-h|--help|-v|--verbose]\n", argv[0]);
             fprintf(stderr, "where:\n");
             fprintf(stderr, "   -h:     help\n");
             fprintf(stderr, "   -v:     be verbose\n");
