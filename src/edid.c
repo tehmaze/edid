@@ -48,7 +48,7 @@ parse_edid(unsigned char *edid, unsigned long size) {
         return;
     }
 
-    printf(";%s", parse_vendor(edid + MANUFACTURER));
+    printf(":%s", parse_vendor(edid + MANUFACTURER));
 }
 
 static void
