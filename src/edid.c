@@ -25,6 +25,7 @@ static Display              *display;
 static Window               root;
 static int                  screen = -1;
 static XRRScreenResources   *res;
+static Bool                 verbose = False;
 
 const unsigned char edid_v1_header[] = {0x00, 0xff, 0x0ff, 0xff, 0xff, 0xff, 0xff, 0x00};
 
@@ -88,9 +89,16 @@ parse_edid(unsigned char *buffer, unsigned long size) {
     if (strncmp(edid->header, edid_v1_header, sizeof(edid_v1_header))) {
         printf("<corrupt EDID v1 header>");
     } else {
-        printf(":%s", parse_vendor(edid));
-        printf(":%s", parse_product(edid));
-        printf(":%s", parse_serial(edid));
+        if (verbose) {
+            printf("\n");
+            printf("  vendor : %s\n", parse_vendor(edid));
+            printf("  product: %s\n", parse_product(edid));
+            printf("  serial : %s\n", parse_serial(edid));
+        } else {
+            printf(":%s", parse_vendor(edid));
+            printf(":%s", parse_product(edid));
+            printf(":%s", parse_serial(edid));
+        }
     }
 }
 
@@ -137,6 +145,22 @@ main(int argc, char **argv) {
     char *display_name = NULL;
     int event_base, error_base;
     int major, minor;
+
+    if (argc > 1) {
+        if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
+            fprintf(stderr, "edid version 0.1\n");
+            fprintf(stderr, "usage: %s [-h|--help|-v|--verbose]\n", argv[0]);
+            fprintf(stderr, "where:\n");
+            fprintf(stderr, "   -h:     help\n");
+            fprintf(stderr, "   -v:     be verbose\n");
+            exit(0);
+        } else if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--verbose")) {
+            verbose = 1;
+        } else {
+            fprintf(stderr, "%s: invalid switch\n", argv[0]);
+            exit(1);
+        }
+    }
 
     display = XOpenDisplay(display_name);
     if (display == NULL) {
