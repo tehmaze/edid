@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
+#include <inttypes.h>
 
 #define COMBINE_HI_8LO(a,b) ((((unsigned)a) << 8) | (unsigned)b)
 #define COMBINE_HI_4LO(a,b) ((((unsigned)a) << 4) | (unsigned)b)
@@ -24,31 +25,73 @@ static Display              *display;
 static Window               root;
 static int                  screen = -1;
 static XRRScreenResources   *res;
-typedef unsigned char       byte;
 
-const byte edid_v1_header[] = {0x00, 0xff, 0x0ff, 0xff, 0xff, 0xff, 0xff, 0x00};
+const unsigned char edid_v1_header[] = {0x00, 0xff, 0x0ff, 0xff, 0xff, 0xff, 0xff, 0x00};
+
+typedef struct {
+    uint8_t                 header[8];
+    uint8_t                 vendor[2];
+    uint8_t                 product[2];
+    uint8_t                 serial[4];
+    uint8_t                 manufactured_week;
+    uint8_t                 manufactured_year;
+    uint8_t                 edid_version;
+    uint8_t                 edid_revision;
+    uint8_t                 display_params[5];
+    uint8_t                 color_characteristics[10];
+    uint8_t                 established_timings[3];
+    uint16_t                standard_timings[8];
+} edid_t;
 
 static char*
-parse_vendor(byte const* vendorid) {
-    static char sign[4];
-    unsigned short h;
+parse_vendor(edid_t *edid) {
+    static char buff[4];
+    unsigned short h = COMBINE_HI_8LO(edid->vendor[0], edid->vendor[1]);
+    buff[0] = ((h >> 0x0a) & 0x1f) + 'A' - 1;
+    buff[1] = ((h >> 0x05) & 0x1f) + 'A' - 1;
+    buff[2] = ((h >> 0x00) & 0x1f) + 'A' - 1;
+    buff[3] = 0;
+    return buff;
+}
 
-    h = COMBINE_HI_8LO(vendorid[0], vendorid[1]);
-    sign[0] = ((h >> 0x0a) & 0x1f) + 'A' - 1;
-    sign[1] = ((h >> 0x05) & 0x1f) + 'A' - 1;
-    sign[2] = (h   & 0x1f) + 'A' - 1;
-    sign[3] = 0;
-    return sign;
+static char*
+parse_product(edid_t *edid) {
+    static char buff[5];
+    uint16_t product =
+          (edid->product[1] << 0x08)
+        | (edid->product[0] << 0x00);
+    snprintf(buff, sizeof(buff), "%04x", product);
+    return buff;
+}
+
+static char*
+parse_serial(edid_t *edid) {
+    static char buff[9];
+    uint32_t serial =
+          (edid->serial[3] << 0x18)
+        | (edid->serial[2] << 0x10)
+        | (edid->serial[1] << 0x08)
+        | (edid->serial[0] << 0x00);
+    snprintf(buff, sizeof(buff), "%08x", serial);
+    return buff;
 }
 
 static void
-parse_edid(unsigned char *edid, unsigned long size) {
-    if (strncmp(edid + EDID_HEADER, edid_v1_header, EDID_HEADER_END + 1)) {
-        fprintf(stderr, "<corrupt EDID v1 header>");
-        return;
+parse_edid(unsigned char *buffer, unsigned long size) {
+    edid_t *edid = calloc(1, sizeof(edid_t));
+    if (!edid) {
+        fprintf(stderr, "OOM!\n");
+        exit(1);
     }
 
-    printf(":%s", parse_vendor(edid + MANUFACTURER));
+    memcpy(edid, buffer, sizeof(edid_t));
+    if (strncmp(edid->header, edid_v1_header, sizeof(edid_v1_header))) {
+        printf("<corrupt EDID v1 header>");
+    } else {
+        printf(":%s", parse_vendor(edid));
+        printf(":%s", parse_product(edid));
+        printf(":%s", parse_serial(edid));
+    }
 }
 
 static void
